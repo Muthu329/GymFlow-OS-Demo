@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GymFlow OS - AI Receptionist Platform</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#09090b',
+                        zinc: {
+                            850: '#1f1f23',
+                            950: '#09090b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-text {
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .spinner {
+            border: 3px solid rgba(16, 185, 129, 0.2);
+            border-top: 3px solid #10b981;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .chat-typing::after {
+            content: '...';
+            animation: typing 1.5s infinite;
+        }
+        @keyframes typing {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 8px;
+            background: linear-gradient(to right, #10b981 0%, #10b981 var(--value), #3f3f46 var(--value), #3f3f46 100%);
+            border-radius: 4px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            background: #10b981;
+            border-radius: 50%;
+            margin-top: -8px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-white min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Icon Components
+        const Icon = ({ name, size = 24, className = "" }) => {
+            const iconRef = useRef(null);
+            useEffect(() => {
+                if (iconRef.current && lucide && lucide[name]) {
+                    iconRef.current.innerHTML = '';
+                    const svg = lucide.createElement(lucide[name]);
+                    svg.setAttribute('width', size);
+                    svg.setAttribute('height', size);
+                    if (className) {
+                        className.split(' ').forEach(c => svg.classList.add(c));
+                    }
+                    iconRef.current.appendChild(svg);
+                }
+            }, [name, size, className]);
+            return <span ref={iconRef} className="inline-flex items-center justify-center"></span>;
+        };
+
+        // Landing View Component
+        const LandingView = ({ onLaunch }) => {
+            const [missedCalls, setMissedCalls] = useState(15);
+            const yearlyLoss = missedCalls * 500 * 12;
+            const sliderPercentage = (missedCalls / 50) * 100;
+
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12 fade-in">
+                    <div className="max-w-4xl mx-auto text-center">
+                        <div className="mb-8">
+                            <div className="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-4 py-2 mb-6">
+                                <span className="w-2 h-2 bg-emerald-500 rounded-full pulse-dot"></span>
+                                <span className="text-emerald-400 text-sm font-medium">AI-Powered • 24/7 Active</span>
+                            </div>
+                            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+                                The AI Receptionist That Adds{' '}
+                                <span className="gradient-text">$10k/Mo</span> To Your Gym.
+                            </h1>
+                            <p className="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto">
+                                Never miss another lead. Our AI answers calls, books appointments, and recovers lost revenue while you focus on training.
+                            </p>
+                        </div>
+
+                        {/* Revenue Calculator */}
+                        <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-8 mb-10 max-w-xl mx-auto">
+                            <h3 className="text-xl font-semibold mb-6 flex items-center justify-center gap-2">
+                                <Icon name="Calculator" size={20} className="text-emerald-500" />
+                                Missed Revenue Calculator
+                            </h3>
+                            
+                            <div className="mb-8">
+                                <div className="flex justify-between mb-3">
+                                    <span className="text-zinc-400">Missed Calls Per Week</span>
+                                    <span className="text-emerald-500 font-bold text-xl">{missedCalls}</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="50"
+                                    value={missedCalls}
+                                    onChange={(e) => setMissedCalls(parseInt(e.target.value))}
+                                    className="w-full cursor-pointer"
+                                    style={{ '--value': `${sliderPercentage}%` }}
+                                />
+                                <div className="flex justify-between text-xs text-zinc-500 mt-1">
+                                    <span>0</span>
+                                    <span>50</span>
+                                </div>
+                            </div>
+
+                            <div className="bg-red-950/30 border border-red-900/50 rounded-xl p-6">
+                                <p className="text-zinc-400 text-sm mb-2">Yearly Revenue Lost</p>
+                                <p className="text-4xl font-bold text-red-500">
+                                    ${yearlyLoss.toLocaleString()}
+                                </p>
+                                <p className="text-zinc-500 text-xs mt-2">Based on $500 average member LTV</p>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={onLaunch}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-black font-semibold px-8 py-4 rounded-xl text-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/25 flex items-center gap-3 mx-auto"
+                        >
+                            <Icon name="Rocket" size={20} />
+                            Launch Dashboard
+                        </button>
+
+                        <div className="mt-12 flex items-center justify-center gap-8 text-zinc-500 text-sm">
+                            <div className="flex items-center gap-2">
+                                <Icon name="Shield" size={16} className="text-emerald-500" />
+                                <span>SOC2 Compliant</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Icon name="Lock" size={16} className="text-emerald-500" />
+                                <span>256-bit Encryption</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Icon name="Server" size={16} className="text-emerald-500" />
+                                <span>99.9% Uptime</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Loading Sequence Component
+        const LoadingSequence = ({ onComplete }) => {
+            const [step, setStep] = useState(0);
+            const steps = [
+                "Establishing Secure Connection...",
+                "Syncing Twilio Gateway...",
+                "Verifying Gym ID...",
+                "Loading Dashboard..."
+            ];
+
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    setStep(prev => {
+                        if (prev < steps.length - 1) return prev + 1;
+                        return prev;
+                    });
+                }, 600);
+
+                const timeout = setTimeout(() => {
+                    onComplete();
+                }, 2500);
+
+                return () => {
+                    clearInterval(interval);
+                    clearTimeout(timeout);
+                };
+            }, []);
+
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center fade-in">
+                    <div className="spinner mb-8"></div>
+                    <div className="space-y-3 text-center">
+                        {steps.slice(0, step + 1).map((text, i) => (
+                            <p key={i} className={`text-sm font-mono ${i === step ? 'text-emerald-500' : 'text-zinc-500'} fade-in`}>
+                                {i < step ? '✓' : '○'} {text}
+                            </p>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // Dashboard Component
+        const Dashboard = ({ gymName, onOpenSettings }) => {
+            const [activityFeed, setActivityFeed] = useState([
+                { name: "Sarah J.", action: "booked via SMS", time: "2m ago", type: "booking" },
+                { name: "Mike R.", action: "inquiry answered", time: "5m ago", type: "inquiry" },
+                { name: "Jessica L.", action: "membership renewed", time: "12m ago", type: "renewal" },
+                { name: "Tom W.", action: "booked trial session", time: "18m ago", type: "booking" },
+                { name: "Amanda K.", action: "callback scheduled", time: "25m ago", type: "callback" },
+            ]);
+
+            const [chatMessages, setChatMessages] = useState([
+                { sender: "lead", text: "Hi, I saw your ad. How much is a membership?", time: "10:32 AM" },
+                { sender: "ai", text: "Hey! Great to hear from you! 💪 Our memberships start at $49/month with full gym access. Are you looking for personal training too?", time: "10:32 AM" },
+                { sender: "lead", text: "Maybe, what times are available?", time: "10:33 AM" },
+            ]);
+            const [isTyping, setIsTyping] = useState(true);
+            const [revenueRecovered, setRevenueRecovered] = useState(4250);
+
+            useEffect(() => {
+                const typingTimeout = setTimeout(() => {
+                    setIsTyping(false);
+                    setChatMessages(prev => [...prev, {
+                        sender: "ai",
+                        text: "We have openings tomorrow at 9 AM or 5 PM. I can lock in a FREE trial session for you right now. Which works better?",
+                        time: "10:33 AM"
+                    }]);
+                }, 3000);
+
+                return () => clearTimeout(typingTimeout);
+            }, []);
+
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    setRevenueRecovered(prev => prev + Math.floor(Math.random() * 50));
+                }, 5000);
+                return () => clearInterval(interval);
+            }, []);
+
+            const newLeads = [
+                { name: "Chris P.", action: "requested pricing" },
+                { name: "Dana M.", action: "asked about classes" },
+                { name: "Eric S.", action: "booked consultation" },
+            ];
+
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    const randomLead = newLeads[Math.floor(Math.random() * newLeads.length)];
+                    setActivityFeed(prev => [{
+                        name: randomLead.name,
+                        action: randomLead.action,
+                        time: "Just now",
+                        type: "booking"
+                    }, ...prev.slice(0, 4)]);
+                }, 8000);
+                return () => clearInterval(interval);
+            }, []);
+
+            return (
+                <div className="min-h-screen bg-zinc-950 fade-in">
+                    {/* Top Bar */}
+                    <header className="bg-zinc-900/80 border-b border-zinc-800 px-6 py-4 sticky top-0 z-50 backdrop-blur-sm">
+                        <div className="max-w-7xl mx-auto flex items-center justify-between">
+                            <div className="flex items-center gap-6">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+                                        <Icon name="Dumbbell" size={18} className="text-black" />
+                                    </div>
+                                    <span className="font-bold text-lg">GymFlow OS</span>
+                                </div>
+                                <div className="hidden md:flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 rounded-full px-3 py-1.5">
+                                    <span className="w-2 h-2 bg-emerald-500 rounded-full pulse-dot"></span>
+                                    <span className="text-emerald-400 text-sm font-medium">System Active</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <span className="text-zinc-400 text-sm hidden sm:block">Account: <span className="text-white font-medium">{gymName}</span></span>
+                                <button
+                                    onClick={onOpenSettings}
+                                    className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                                >
+                                    <Icon name="Settings" size={20} className="text-zinc-400" />
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="max-w-7xl mx-auto px-6 py-8">
+                        {/* Welcome */}
+                        <div className="mb-8">
+                            <h1 className="text-2xl font-bold mb-1">Welcome back, {gymName}</h1>
+                            <p className="text-zinc-500">Your AI receptionist is handling leads right now.</p>
+                        </div>
+
+                        {/* KPI Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className="text-zinc-400 text-sm">Revenue Recovered</span>
+                                    <div className="flex items-center gap-1 text-emerald-500 text-sm">
+                                        <Icon name="TrendingUp" size={16} />
+                                        <span>+12%</span>
+                                    </div>
+                                </div>
+                                <p className="text-3xl font-bold text-emerald-500">${revenueRecovered.toLocaleString()}</p>
+                                <p className="text-zinc-500 text-xs mt-1">This month</p>
+                            </div>
+
+                            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className="text-zinc-400 text-sm">Missed Calls Caught</span>
+                                    <div className="flex items-center gap-1 text-emerald-500 text-sm">
+                                        <Icon name="TrendingUp" size={16} />
+                                        <span>+8%</span>
+                                    </div>
+                                </div>
+                                <p className="text-3xl font-bold">12</p>
+                                <p className="text-zinc-500 text-xs mt-1">This week</p>
+                            </div>
+
+                            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className="text-zinc-400 text-sm">Bookings Made</span>
+                                    <div className="flex items-center gap-1 text-emerald-500 text-sm">
+                                        <Icon name="TrendingUp" size={16} />
+                                        <span>+24%</span>
+                                    </div>
+                                </div>
+                                <p className="text-3xl font-bold">28</p>
+                                <p className="text-zinc-500 text-xs mt-1">This month</p>
+                            </div>
+
+                            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className="text-zinc-400 text-sm">Response Rate</span>
+                                    <div className="flex items-center gap-1 text-emerald-500 text-sm">
+                                        <Icon name="Zap" size={16} />
+                                        <span>&lt;30s</span>
+                                    </div>
+                                </div>
+                                <p className="text-3xl font-bold">98%</p>
+                                <p className="text-zinc-500 text-xs mt-1">Avg response time: 12s</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Live Activity Feed */}
+                            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="font-semibold flex items-center gap-2">
+                                        <Icon name="Activity" size={18} className="text-emerald-500" />
+                                        Live Activity Feed
+                                    </h3>
+                                    <span className="text-xs text-zinc-500">Real-time</span>
+                                </div>
+                                <div className="space-y-4 max-h-80 overflow-y-auto scrollbar-hide">
+                                    {activityFeed.map((item, i) => (
+                                        <div key={i} className="flex items-center gap-4 p-3 bg-zinc-800/50 rounded-lg fade-in">
+                                            <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                                                <Icon name={item.type === 'booking' ? 'Calendar' : item.type === 'renewal' ? 'RefreshCw' : 'MessageSquare'} size={18} className="text-emerald-500" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm">
+                                                    <span className="font-medium">{item.name}</span>
+                                                    <span className="text-zinc-400"> {item.action}</span>
+                                                </p>
+                                                <p className="text-xs text-zinc-500">{item.time}</p>
+                                            </div>
+                                            <div className="w-2 h-2 bg-emerald-500 rounded-full pulse-dot"></div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Chat Simulator */}
+                            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="font-semibold flex items-center gap-2">
+                                        <Icon name="MessageCircle" size={18} className="text-emerald-500" />
+                                        Live AI Conversation
+                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 bg-emerald-500 rounded-full pulse-dot"></span>
+                                        <span className="text-xs text-emerald-500">Active</span>
+                                    </div>
+                                </div>
+                                <div className="bg-zinc-800/50 rounded-lg p-4 h-72 overflow-y-auto scrollbar-hide">
+                                    <div className="space-y-4">
+                                        {chatMessages.map((msg, i) => (
+                                            <div key={i} className={`flex ${msg.sender === 'ai' ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[80%] p-3 rounded-2xl ${
+                                                    msg.sender === 'ai' 
+                                                        ? 'bg-emerald-500 text-black rounded-br-md' 
+                                                        : 'bg-zinc-700 text-white rounded-bl-md'
+                                                }`}>
+                                                    <p className="text-sm">{msg.text}</p>
+                                                    <p className={`text-xs mt-1 ${msg.sender === 'ai' ? 'text-emerald-800' : 'text-zinc-400'}`}>{msg.time}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {isTyping && (
+                                            <div className="flex justify-end">
+                                                <div className="bg-emerald-500/20 border border-emerald-500/30 p-3 rounded-2xl rounded-br-md">
+                                                    <p className="text-sm text-emerald-400 chat-typing">AI is typing</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="mt-4 flex items-center gap-2 text-xs text-zinc-500">
+                                    <Icon name="Bot" size={14} className="text-emerald-500" />
+                                    <span>GymFlow AI handling lead: New Prospect #847</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Performance Overview */}
+                        <div className="mt-6 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+                            <h3 className="font-semibold flex items-center gap-2 mb-6">
+                                <Icon name="BarChart3" size={18} className="text-emerald-500" />
+                                Weekly Performance
+                            </h3>
+                            <div className="grid grid-cols-7 gap-2">
+                                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => {
+                                    const heights = [65, 80, 45, 90, 75, 55, 40];
+                                    return (
+                                        <div key={day} className="flex flex-col items-center gap-2">
+                                            <div className="w-full h-24 bg-zinc-800 rounded-lg relative overflow-hidden">
+                                                <div 
+                                                    className="absolute bottom-0 w-full bg-gradient-to-t from-emerald-500 to-emerald-400 rounded-lg transition-all duration-1000"
+                                                    style={{ height: `${heights[i]}%` }}
+                                                ></div>
+                                            </div>
+                                            <span className="text-xs text-zinc-500">{day}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        // Settings Modal Component
+        const SettingsModal = ({ gymName, onSave, onClose }) => {
+            const [name, setName] = useState(gymName);
+
+            return (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 fade-in px-4">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-md w-full">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                                <Icon name="Settings" size={20} className="text-emerald-500" />
+                                Account Settings
+                            </h2>
+                            <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+                                <Icon name="X" size={20} className="text-zinc-400" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div>
+                                <label className="block text-sm text-zinc-400 mb-2">Gym Name</label>
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                                    placeholder="Enter your gym name"
+                                />
+                            </div>
+
+                            <div className="pt-4 flex gap-3">
+                                <button
+                                    onClick={onClose}
+                                    className="flex-1 px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors text-zinc-300"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => { onSave(name); onClose(); }}
+                                    className="flex-1 px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Icon name="Check" size={18} />
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Main App Component
+        const App = () => {
+            const [view, setView] = useState('landing'); // landing, loading, dashboard
+            const [gymName, setGymName] = useState('Iron Peak Fitness');
+            const [showSettings, setShowSettings] = useState(false);
+
+            const handleLaunch = () => {
+                setView('loading');
+            };
+
+            const handleLoadingComplete = () => {
+                setView('dashboard');
+            };
+
+            return (
+                <>
+                    {view === 'landing' && <LandingView onLaunch={handleLaunch} />}
+                    {view === 'loading' && <LoadingSequence onComplete={handleLoadingComplete} />}
+                    {view === 'dashboard' && (
+                        <Dashboard 
+                            gymName={gymName} 
+                            onOpenSettings={() => setShowSettings(true)} 
+                        />
+                    )}
+                    {showSettings && (
+                        <SettingsModal 
+                            gymName={gymName}
+                            onSave={setGymName}
+                            onClose={() => setShowSettings(false)}
+                        />
+                    )}
+                </>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
