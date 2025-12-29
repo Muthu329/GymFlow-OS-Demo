@@ -306,4 +306,32 @@
                                     {i <= step && (
                                         <span className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center text-black font-bold text-sm">✓</span>
                                     )}
-                                    <span className=
+                                    <span className={`font-semibold ${i === step ? 'text-emerald-400 animate-pulse' : 'text-white'}`}>
+                                        {text}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Main App Component
+        function App() {
+            const [view, setView] = useState('landing');
+
+            return (
+                <>
+                    {view === 'landing' && <LandingPage setView={setView} />}
+                    {view === 'login' && <LoginSequence setView={setView} />}
+                </>
+            );
+        }
+
+        // Render App
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
